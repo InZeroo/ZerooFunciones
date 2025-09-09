@@ -50,7 +50,7 @@
 :: 3.1 Se mejora la deteccion de laptop o pc de mesa
 :: 3.2 Configuracion modo tecnico | si la variable MODO esta configurada en tec este volvera a escribir el dxdiag de pero si esta en user solo lo hara una vez
 :: 3.3 Se añade reparacion de WMIC  en caso de que este no funcione ya que es indispensable para las optimizaciones
-:: 3.4 Se añaden actualizaciones online
+:: 3.4 Se añade acutalizacion online 
 ::========================================================================================================================================
 ::========================================================================================================================================
 
@@ -64,6 +64,7 @@ set "MODO=user"
 set "Actualizar=yes"
 
 ::========================================================================================================================================
+
 
 call resources\Funciones\Logo3.bat
 @echo off
@@ -489,7 +490,58 @@ if %errorlevel% neq 0 (
 
 ::========================================================================================================================================
 
-if "Actualizar"=="yes" (
-    if "NETWORK_AVAILABLE"=="yes" 
-)
+setlocal enabledelayedexpansion
 
+if %Actualizar%==yes (
+	if %NETWORK_AVAILABLE%==yes (
+	
+	    cls
+		
+        :: URLs y rutas
+        set "REMOTE_VER_URL=https://raw.githubusercontent.com/InZeroo/ZerooFunciones/main/Funciones/Version.txt"
+        set "LOCAL_VER_FILE=resources\Funciones\Version.txt"
+        set "REPO_URL=https://github.com/InZeroo/ZerooFunciones.git"
+		set "TEMP_DIR=%TEMP%\temp_update_Zeroofunciones"
+		
+		:: Leer versión remota directamente online con PowerShell
+		for /f "usebackq delims=" %%i in (`powershell -NoLogo -NoProfile -Command "(Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/InZeroo/ZerooFunciones/refs/heads/main/Funciones/Version.txt').Content"`) do (
+			set "REMOTE_VER=%%i"
+		)
+		
+		:: Leer versión local 
+		if exist "!LOCAL_VER_FILE!" ( 
+			set /p LOCAL_VER=<"!LOCAL_VER_FILE!" 
+		) else ( 
+			echo no se detecto version
+		)
+		
+        :: Convertir versiones (quita el punto para comparar como número)
+        set "REMOTE_NUM=!REMOTE_VER:.=!"
+        set "LOCAL_NUM=!LOCAL_VER:.=!"
+		
+		::comparar
+        if %REMOTE_NUM% GTR %LOCAL_NUM% (
+            echo Actualización disponible. Instalando...
+
+            :: Eliminar carpeta actual
+            if exist "resources\Funciones" rd /s /q "resources\Funciones"
+
+            :: Clonar repo en carpeta temporal
+            if exist "%TEMP_DIR%" rd /s /q "%TEMP_DIR%"
+            git clone "%REPO_URL%" "%TEMP_DIR%"
+
+            :: Copiar contenido a resources
+            xcopy "%TEMP_DIR%\Funciones" "resources\Funciones" /E /I /Y
+
+            :: Limpiar
+            rd /s /q "%TEMP_DIR%"
+
+            echo Actualización completada.
+            echo Debes volver a ejecutar el script.
+            pause
+            exit
+        ) else (
+            echo última versión.
+        )
+	)
+)
