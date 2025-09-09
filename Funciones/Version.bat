@@ -490,21 +490,22 @@ if %errorlevel% neq 0 (
 
 ::========================================================================================================================================
 
-setlocal enabledelayedexpansion
-
 if %Actualizar%==yes (
 	if %NETWORK_AVAILABLE%==yes (
+	
+		setlocal enabledelayedexpansion
 	
 	    cls
 		
         :: URLs y rutas
-        set "REMOTE_VER_URL=https://raw.githubusercontent.com/InZeroo/ZerooFunciones/main/Funciones/Version.txt"
+		set "BASE_URL=https://raw.githubusercontent.com/InZeroo/ZerooFunciones/refs/heads/main/Funciones"
+        set "REMOTE_VER_URL=%BASE_URL%/Version.txt"
         set "LOCAL_VER_FILE=resources\Funciones\Version.txt"
-        set "REPO_URL=https://github.com/InZeroo/ZerooFunciones.git"
-		set "TEMP_DIR=%TEMP%\temp_update_Zeroofunciones"
-		
+		set "OUTDIR=%TEMP%\temp_update_Zeroofunciones"
+		set "ARCHIVOS=consola.cmd log.bat Logo.bat Logo2.bat Logo3.bat Suscribete.bat Version.bat bin\setacl.exe bin\smartctl.exe bin\WMIC.exe lib\DeleteTask.bat lib\DesactivarTask.bat lib\log.bat lib\RegAdd.bat lib\RegDel.bat lib\RegQuery.bat lib\SCError1.bat lib\SCError2.bat lib\SCQuery.bat lib\SCQuery2.bat lib\SCQuery3.bat lib\SCServicesDel.bat lib\SCServicesDown.bat lib\SCServicesUp.bat"
+
 		:: Leer versión remota directamente online con PowerShell
-		for /f "usebackq delims=" %%i in (`powershell -NoLogo -NoProfile -Command "(Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/InZeroo/ZerooFunciones/refs/heads/main/Funciones/Version.txt').Content"`) do (
+		for /f "usebackq delims=" %%i in (`powershell -NoLogo -NoProfile -Command "(Invoke-WebRequest -Uri '%REMOTE_VER_URL%').Content"`) do (
 			set "REMOTE_VER=%%i"
 		)
 		
@@ -522,19 +523,19 @@ if %Actualizar%==yes (
 		::comparar
         if %REMOTE_NUM% GTR %LOCAL_NUM% (
             echo Actualización disponible. Instalando...
-
-            :: Eliminar carpeta actual
-            if exist "resources\Funciones" rd /s /q "resources\Funciones"
-
-            :: Clonar repo en carpeta temporal
-            if exist "%TEMP_DIR%" rd /s /q "%TEMP_DIR%"
-            git clone "%REPO_URL%" "%TEMP_DIR%"
-
-            :: Copiar contenido a resources
-            xcopy "%TEMP_DIR%\Funciones" "resources\Funciones" /E /I /Y
+			
+			for %%A in (%ARCHIVOS%) do (
+				echo Descargando %%A ...
+				if "!hasCurl!"=="1" (
+					curl -L "%BASE_URL%/%%A" --output "%OUTDIR%\%%A"
+				) else (
+					powershell -ExecutionPolicy Bypass -Command ^
+					"$ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri '%BASE_URL%/%%A' -OutFile '%OUTDIR%\%%A'"
+				)
+			)
 
             :: Limpiar
-            rd /s /q "%TEMP_DIR%"
+            ::rd /s /q "%TEMP_DIR%"
 
             echo Actualización completada.
             echo Debes volver a ejecutar el script.
@@ -542,6 +543,8 @@ if %Actualizar%==yes (
             exit
         ) else (
             echo última versión.
+			pause
         )
 	)
 )
+
